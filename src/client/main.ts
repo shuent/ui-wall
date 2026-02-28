@@ -58,6 +58,9 @@ let dragSourceFilename: string | null = null;
 const cardMap = new Map<string, HTMLElement>();
 
 function createCard(filename: string, index: number): HTMLElement {
+    const isExternal = filename.startsWith('http://') || filename.startsWith('https://');
+    const url = isExternal ? filename : `/${filename}`;
+    
     const card = document.createElement('div');
     card.className = 'artifact-card';
     card.setAttribute('draggable', 'true');
@@ -66,10 +69,10 @@ function createCard(filename: string, index: number): HTMLElement {
     card.innerHTML = `
         <div class="artifact-header">
             <span>${filename}</span>
-            <a href="/${filename}" target="_blank">↗</a>
+            <a href="${url}" target="_blank">↗</a>
         </div>
         <div class="iframe-container">
-            <iframe class="artifact-iframe" src="/${filename}"></iframe>
+            <iframe class="artifact-iframe" src="${url}"></iframe>
         </div>
     `;
 
