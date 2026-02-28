@@ -9,6 +9,7 @@ var lastX = 0;
 var lastY = 0;
 function updateTransform() {
   canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+  viewport.style.backgroundPosition = `${translateX}px ${translateY}px`;
 }
 viewport.addEventListener("mousedown", (e) => {
   if (e.button === 0 && !e.target.closest(".artifact-card")) {
@@ -35,16 +36,16 @@ window.addEventListener("mouseup", () => {
 });
 viewport.addEventListener("wheel", (e) => {
   e.preventDefault();
-  const zoomFactor = 1.1;
-  const direction = e.deltaY > 0 ? 1 / zoomFactor : zoomFactor;
   const mouseX = e.clientX;
   const mouseY = e.clientY;
   const oldScale = scale;
-  scale *= direction;
+  const delta = e.deltaY;
+  const zoomFactor = Math.pow(1.1, -delta / 100);
+  scale *= zoomFactor;
   scale = Math.min(Math.max(scale, 0.05), 5);
-  const actualDirection = scale / oldScale;
-  translateX = mouseX - (mouseX - translateX) * actualDirection;
-  translateY = mouseY - (mouseY - translateY) * actualDirection;
+  const actualZoom = scale / oldScale;
+  translateX = mouseX - (mouseX - translateX) * actualZoom;
+  translateY = mouseY - (mouseY - translateY) * actualZoom;
   updateTransform();
 }, { passive: false });
 var currentArtifacts = [];

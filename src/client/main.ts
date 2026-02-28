@@ -10,6 +10,7 @@ let lastY = 0;
 
 function updateTransform() {
     canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    viewport.style.backgroundPosition = `${translateX}px ${translateY}px`;
 }
 
 viewport.addEventListener('mousedown', (e) => {
@@ -40,16 +41,25 @@ window.addEventListener('mouseup', () => {
 
 viewport.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const zoomFactor = 1.1;
-    const direction = e.deltaY > 0 ? 1 / zoomFactor : zoomFactor;
+    
     const mouseX = e.clientX;
     const mouseY = e.clientY;
     const oldScale = scale;
-    scale *= direction;
+
+    // Use a sensitivity factor that works well for both mouse wheels and trackpads
+    // We use a multiplicative approach for a more natural feel across zoom levels
+    const delta = e.deltaY;
+    const zoomFactor = Math.pow(1.1, -delta / 100);
+    
+    scale *= zoomFactor;
     scale = Math.min(Math.max(scale, 0.05), 5);
-    const actualDirection = scale / oldScale;
-    translateX = mouseX - (mouseX - translateX) * actualDirection;
-    translateY = mouseY - (mouseY - translateY) * actualDirection;
+    
+    const actualZoom = scale / oldScale;
+    
+    // Zoom towards the cursor
+    translateX = mouseX - (mouseX - translateX) * actualZoom;
+    translateY = mouseY - (mouseY - translateY) * actualZoom;
+    
     updateTransform();
 }, { passive: false });
 
