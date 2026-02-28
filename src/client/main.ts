@@ -40,6 +40,12 @@ window.addEventListener('mouseup', () => {
 });
 
 viewport.addEventListener('wheel', (e) => {
+    // If over a card and not pressing a modifier key, let the natural scroll happen
+    const isOverCard = (e.target as HTMLElement).closest('.artifact-card');
+    if (isOverCard && !e.ctrlKey && !e.metaKey) {
+        return;
+    }
+
     e.preventDefault();
     
     const mouseX = e.clientX;

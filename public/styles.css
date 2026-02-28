@@ -1,6 +1,6 @@
 :root {
     --card-width: 600px;
-    --card-height: 450px;
+    --card-height: 410px; /* 375 (scaled iframe) + 35 (header) */
     --iframe-width: 1280px;
     --iframe-height: 800px;
     --iframe-scale: 0.46875; /* 600 / 1280 */
@@ -10,7 +10,7 @@ body.mobile-mode {
     --card-width: 375px;
     --card-height: 667px;
     --iframe-width: 375px;
-    --iframe-height: 634px; /* 667 - 33(header) */
+    --iframe-height: 632px; /* 667 - 35 (header) */
     --iframe-scale: 1;
 }
 
@@ -157,7 +157,9 @@ body, html {
 
 .artifact-header {
     background: #f8f9fa;
-    padding: 10px 16px;
+    height: 35px;
+    padding: 0 16px;
+    box-sizing: border-box;
     font-size: 13px;
     font-weight: 600;
     border-bottom: 1px solid #eee;
@@ -188,6 +190,5 @@ body, html {
     height: var(--iframe-height);
     transform-origin: 0 0;
     transform: scale(var(--iframe-scale));
-    pointer-events: none;
     transition: width 0.3s, height 0.3s, transform 0.3s;
 }

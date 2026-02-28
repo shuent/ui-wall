@@ -35,6 +35,10 @@ window.addEventListener("mouseup", () => {
   viewport.style.cursor = "grab";
 });
 viewport.addEventListener("wheel", (e) => {
+  const isOverCard = e.target.closest(".artifact-card");
+  if (isOverCard && !e.ctrlKey && !e.metaKey) {
+    return;
+  }
   e.preventDefault();
   const mouseX = e.clientX;
   const mouseY = e.clientY;

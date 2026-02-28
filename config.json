@@ -1,8 +1,8 @@
 {
   "pages": [
     "dashboard_v2.html",
-    "dashboard_v1.html",
     "components_3.html",
+    "dashboard_v1.html",
     "components_1.html",
     "hello.html",
     "components_2.html",
@@ -10,5 +10,5 @@
     "components_5.html",
     "https://example.com/"
   ],
-  "device": "mobile"
+  "device": "desktop"
 }
