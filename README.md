@@ -1,13 +1,16 @@
-# UI HTML Canvas
+# UI Wall
 
-A local, framework-agnostic UI Prototype Wall for side-by-side visual comparison of HTML artifacts.
+A local, framework-agnostic UI Prototype Wall for side-by-side visual comparison of HTML artifacts and web pages.
+
+![screen](docs/screen1.gif)
 
 ## Features
 
 - **Infinite Canvas:** Pan (click and drag) and Zoom (scroll) freely.
-- **Side-by-Side Comparison:** View multiple HTML artifacts simultaneously.
+- **Side-by-Side Comparison:** View multiple HTML artifacts or live URLs simultaneously.
 - **Isolation:** Each artifact is rendered in its own `<iframe>` to prevent style leaks.
-- **Auto-Loading:** Automatically scans the `artifacts/` directory for `.html` files.
+- **Configurable:** Specify pages via a JSON configuration file.
+- **Hot Updates:** The canvas can be updated dynamically via the API.
 
 ## Usage
 
@@ -16,13 +19,24 @@ A local, framework-agnostic UI Prototype Wall for side-by-side visual comparison
     bun install
     ```
 
-2.  **Add your artifacts:**
-    Drop your HTML files into the `artifacts/` directory.
+2.  **Configure your pages:**
+    Edit `ui-canvas-config.json` to list the local files or URLs you want to display:
+    ```json
+    {
+      "pages": [
+        "path/to/your/local.html",
+        "https://example.com/"
+      ],
+      "device": "desktop"
+    }
+    ```
 
 3.  **Start the server:**
+    Run the execution script:
     ```bash
-    bun start
+    ./ui-canvas
     ```
+    *Alternatively, you can run `bun run start`.*
 
 4.  **View it:**
     Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -31,10 +45,9 @@ A local, framework-agnostic UI Prototype Wall for side-by-side visual comparison
 
 This tool is designed for **local development only**. Do not expose the port (default 3000) to the public internet or untrusted networks.
 
-- **Arbitrary File Access (Path Traversal):** The current server implementation allows reading any file on your system that the process has permission to access. An attacker could potentially steal sensitive data like SSH keys, credentials, or system files.
-- **Unauthenticated Configuration:** The `/api/config` endpoint allows anyone with access to the port to update the configuration file without authentication.
-- **Indirect Command Execution:** While the server doesn't execute OS commands directly, modifying the configuration file could influence other scripts or tools that consume this JSON, potentially leading to command injection in those tools.
-- **XSS/Phishing Risk:** An attacker could inject malicious URLs into the canvas config, which would then be rendered in your browser, allowing them to steal session data or perform actions on your behalf.
+- **Arbitrary File Access (Path Traversal):** The server allows reading any file on your system that the process has permission to access.
+- **Unauthenticated Configuration:** The `/api/config` endpoint allows anyone with access to the port to update the configuration file.
+- **XSS/Phishing Risk:** Malicious URLs injected into the config will be rendered in your browser.
 
 **Never run this server on a public IP.** Use a secure tunnel (like SSH tunneling) or a VPN if remote access is required.
 
@@ -42,5 +55,6 @@ This tool is designed for **local development only**. Do not expose the port (de
 
 - `src/server/`: Backend logic (Bun).
 - `src/client/`: Frontend logic (Vanilla TypeScript).
-- `public/`: Static assets.
-- `artifacts/`: Your HTML prototypes.
+- `public/`: Static UI assets for the tool itself.
+- `ui-canvas-config.json`: Main configuration file.
+- `ui-canvas`: Execution script (requires `bun`).
