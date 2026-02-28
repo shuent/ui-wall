@@ -1,14 +1,28 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { parseArgs } from "node:util";
 
-const PORT = 3000;
-const PUBLIC_DIR = join(process.cwd(), "public");
-const ARTIFACTS_DIR = join(process.cwd(), "artifacts");
-const CONFIG_FILE = join(process.cwd(), "config.json");
+const { values } = parseArgs({
+  args: Bun.argv.slice(2),
+  options: {
+    port: {
+      type: "string",
+      short: "p",
+      default: "3000",
+    },
+  },
+  strict: false,
+});
+
+const PORT = parseInt(values.port!);
+// Use import.meta.dir to get the directory of the current file (portable)
+const PUBLIC_DIR = join(import.meta.dir, "public");
+const CONFIG_FILENAME = "ui-canvas-config.json";
 
 async function getConfig() {
   try {
-    const content = await readFile(CONFIG_FILE, "utf-8");
+    const configPath = join(process.cwd(), CONFIG_FILENAME);
+    const content = await readFile(configPath, "utf-8");
     return JSON.parse(content);
   } catch (error) {
     return { pages: [], device: 'desktop' };
@@ -16,7 +30,8 @@ async function getConfig() {
 }
 
 async function saveConfig(config: any) {
-  await writeFile(CONFIG_FILE, JSON.stringify(config, null, 2));
+  const configPath = join(process.cwd(), CONFIG_FILENAME);
+  await writeFile(configPath, JSON.stringify(config, null, 2));
 }
 
 const server = Bun.serve({
@@ -43,20 +58,31 @@ const server = Bun.serve({
       }
     }
 
-    // Serve public static files
+    // Serve static files
     let path = url.pathname;
-    if (path === "/") path = "/index.html";
     
-    // Check public/
-    let file = Bun.file(join(PUBLIC_DIR, path));
-    if (await file.exists()) return new Response(file);
+    // 1. Tool UI: Root / or /_ui/*
+    if (path === "/") {
+      return new Response(Bun.file(join(PUBLIC_DIR, "index.html")));
+    }
+    
+    if (path.startsWith("/_ui/")) {
+      const assetPath = path.replace("/_ui/", "");
+      return new Response(Bun.file(join(PUBLIC_DIR, assetPath)));
+    }
 
-    // Check artifacts/
-    file = Bun.file(join(ARTIFACTS_DIR, path));
-    if (await file.exists()) return new Response(file);
+    // 2. Check Current Working Directory (for artifacts and their assets)
+    const artifactFile = Bun.file(join(process.cwd(), path));
+    if (await artifactFile.exists()) return new Response(artifactFile);
+
+    // 3. Check as absolute path
+    const absoluteFile = Bun.file(path);
+    if (await absoluteFile.exists()) return new Response(absoluteFile);
 
     return new Response("Not Found", { status: 404 });
   },
 });
 
-console.log(`Server running at http://localhost:${PORT}`);
+console.log(`UI Canvas running at http://localhost:${PORT}`);
+console.log(`Working directory: ${process.cwd()}`);
+console.log(`Config file: ${CONFIG_FILENAME}`);

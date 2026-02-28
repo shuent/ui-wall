@@ -4,8 +4,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "bun build src/client/main.ts --outfile public/main.js",
-    "start": "bun build src/client/main.ts --outfile public/main.js && bun run index.ts"
+    "build:client": "bun build src/client/main.ts --outfile dist/public/main.js",
+    "build:server": "bun build src/server/index.ts --target bun --outfile dist/server.js",
+    "build": "rm -rf dist && mkdir -p dist/public && cp public/index.html public/styles.css dist/public/ && bun run build:client && bun run build:server",
+    "start": "bun run build && bun run dist/server.js"
   },
   "devDependencies": {
     "@types/bun": "latest"

@@ -1,7 +1,3 @@
-Good. I’ll keep this at a product/requirements level — no architecture decisions yet.
-
----
-
 # 1. What
 
 **A local, framework-agnostic UI Prototype Wall** that displays independently generated UI artifacts (HTML pages or component-level HTML) on an infinite canvas for side-by-side visual comparison.
