@@ -1,3 +1,19 @@
+:root {
+    --card-width: 600px;
+    --card-height: 450px;
+    --iframe-width: 1280px;
+    --iframe-height: 800px;
+    --iframe-scale: 0.46875; /* 600 / 1280 */
+}
+
+body.mobile-mode {
+    --card-width: 375px;
+    --card-height: 667px;
+    --iframe-width: 375px;
+    --iframe-height: 634px; /* 667 - 33(header) */
+    --iframe-scale: 1;
+}
+
 body, html {
     margin: 0;
     padding: 0;
@@ -5,8 +21,92 @@ body, html {
     height: 100%;
     overflow: hidden;
     background: #f0f0f0;
-    font-family: sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
+
+#controls {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    width: 120px;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.control-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 100%;
+    height: 32px;
+    background: #e4e4e7;
+    border-radius: 16px;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-switch label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 10px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.toggle-switch label::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: calc(50% - 2px);
+    height: 28px;
+    background: white;
+    border-radius: 14px;
+    transition: 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.toggle-switch input:checked + label::after {
+    left: calc(50% + 2px);
+}
+
+.toggle-label {
+    font-size: 11px;
+    font-weight: 600;
+    z-index: 1;
+    color: #666;
+    transition: 0.3s;
+}
+
+.toggle-switch input:checked + label .mobile { color: #007bff; }
+.toggle-switch input:not(:checked) + label .desktop { color: #007bff; }
 
 #viewport {
     width: 100vw;
@@ -23,34 +123,68 @@ body, html {
     position: absolute;
     transform-origin: 0 0;
     display: grid;
-    gap: 20px;
-    padding: 20px;
+    gap: 30px;
+    padding: 40px;
 }
 
 .artifact-card {
     background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.08);
     overflow: hidden;
-    width: 600px;
-    height: 450px;
+    width: var(--card-width);
+    height: var(--card-height);
     display: flex;
     flex-direction: column;
+    cursor: grab;
+    user-select: none;
+    transition: opacity 0.2s, transform 0.2s, width 0.3s, height 0.3s;
+}
+
+.artifact-card.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+    cursor: grabbing;
+}
+
+.artifact-card.drag-over {
+    outline: 2px solid #007bff;
+    background: rgba(0, 123, 255, 0.05);
 }
 
 .artifact-header {
-    background: #e0e0e0;
-    padding: 8px 12px;
-    font-size: 14px;
-    font-weight: bold;
-    border-bottom: 1px solid #ccc;
+    background: #f8f9fa;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border-bottom: 1px solid #eee;
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+}
+
+.artifact-header a {
+    text-decoration: none;
+    color: #007bff;
+}
+
+.iframe-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #fff;
 }
 
 .artifact-iframe {
-    flex: 1;
     border: none;
-    width: 100%;
-    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--iframe-width);
+    height: var(--iframe-height);
+    transform-origin: 0 0;
+    transform: scale(var(--iframe-scale));
+    pointer-events: none;
+    transition: width 0.3s, height 0.3s, transform 0.3s;
 }
