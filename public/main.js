@@ -98,6 +98,7 @@ function createCard(filename, index) {
         currentArtifacts[sourceIdx] = currentArtifacts[targetIdx];
         currentArtifacts[targetIdx] = temp;
         renderArtifacts();
+        updateConfigOnServer({ pages: currentArtifacts });
       }
     }
     return false;
@@ -110,13 +111,22 @@ function updateGrid() {
   const cardWidth = getComputedStyle(document.body).getPropertyValue("--card-width").trim();
   canvas.style.gridTemplateColumns = `repeat(${cols}, ${cardWidth})`;
 }
-deviceToggle.addEventListener("change", () => {
-  if (deviceToggle.checked) {
-    document.body.classList.add("mobile-mode");
-  } else {
-    document.body.classList.remove("mobile-mode");
+async function updateConfigOnServer(newConfig) {
+  try {
+    await fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newConfig)
+    });
+  } catch (error) {
+    console.error("Failed to update config on server:", error);
   }
+}
+deviceToggle.addEventListener("change", () => {
+  const isMobile = deviceToggle.checked;
+  document.body.classList.toggle("mobile-mode", isMobile);
   updateGrid();
+  updateConfigOnServer({ device: isMobile ? "mobile" : "desktop" });
 });
 function renderArtifacts() {
   updateGrid();
@@ -136,25 +146,27 @@ function renderArtifacts() {
     card.style.order = index.toString();
   });
 }
-async function fetchArtifacts() {
+async function syncConfig() {
   try {
-    const response = await fetch("/api/artifacts");
-    const artifacts = await response.json();
-    const sortedNew = [...artifacts].sort();
-    const sortedCurrent = [...currentArtifacts].sort();
-    if (JSON.stringify(sortedNew) !== JSON.stringify(sortedCurrent)) {
-      const newOrder = currentArtifacts.filter((f) => artifacts.includes(f));
-      artifacts.forEach((f) => {
-        if (!newOrder.includes(f))
-          newOrder.push(f);
-      });
-      currentArtifacts = newOrder;
+    const response = await fetch("/api/config");
+    const config = await response.json();
+    const isMobile = config.device === "mobile";
+    if (deviceToggle.checked !== isMobile) {
+      deviceToggle.checked = isMobile;
+      document.body.classList.toggle("mobile-mode", isMobile);
+      updateGrid();
+    }
+    if (JSON.stringify(config.pages) !== JSON.stringify(currentArtifacts)) {
+      currentArtifacts = config.pages || [];
       renderArtifacts();
     }
   } catch (error) {
-    console.error("Failed to load artifacts:", error);
+    console.error("Failed to sync config:", error);
   }
 }
-updateTransform();
-fetchArtifacts();
-setInterval(fetchArtifacts, 5000);
+async function init() {
+  updateTransform();
+  await syncConfig();
+  setInterval(syncConfig, 2000);
+}
+init();

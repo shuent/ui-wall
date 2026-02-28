@@ -113,6 +113,7 @@ function createCard(filename: string, index: number): HTMLElement {
                 currentArtifacts[sourceIdx] = currentArtifacts[targetIdx];
                 currentArtifacts[targetIdx] = temp;
                 renderArtifacts();
+                updateConfigOnServer({ pages: currentArtifacts });
             }
         }
         return false;
@@ -128,13 +129,23 @@ function updateGrid() {
     canvas.style.gridTemplateColumns = `repeat(${cols}, ${cardWidth})`;
 }
 
-deviceToggle.addEventListener('change', () => {
-    if (deviceToggle.checked) {
-        document.body.classList.add('mobile-mode');
-    } else {
-        document.body.classList.remove('mobile-mode');
+async function updateConfigOnServer(newConfig: { pages?: string[], device?: string }) {
+    try {
+        await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newConfig)
+        });
+    } catch (error) {
+        console.error('Failed to update config on server:', error);
     }
+}
+
+deviceToggle.addEventListener('change', () => {
+    const isMobile = deviceToggle.checked;
+    document.body.classList.toggle('mobile-mode', isMobile);
     updateGrid();
+    updateConfigOnServer({ device: isMobile ? 'mobile' : 'desktop' });
 });
 
 function renderArtifacts() {
@@ -156,34 +167,36 @@ function renderArtifacts() {
             cardMap.set(filename, card);
             canvas.appendChild(card);
         }
-        // Use CSS 'order' to visually rearrange without reloading the iframe
         card.style.order = index.toString();
     });
 }
 
-async function fetchArtifacts() {
+async function syncConfig() {
     try {
-        const response = await fetch('/api/artifacts');
-        const artifacts: string[] = await response.json();
+        const response = await fetch('/api/config');
+        const config = await response.json();
         
-        const sortedNew = [...artifacts].sort();
-        const sortedCurrent = [...currentArtifacts].sort();
-
-        // Only trigger full sync if the actual files in the directory changed
-        if (JSON.stringify(sortedNew) !== JSON.stringify(sortedCurrent)) {
-            // Keep existing order for items that are still there, add new ones at the end
-            const newOrder = currentArtifacts.filter(f => artifacts.includes(f));
-            artifacts.forEach(f => {
-                if (!newOrder.includes(f)) newOrder.push(f);
-            });
-            currentArtifacts = newOrder;
+        const isMobile = config.device === 'mobile';
+        if (deviceToggle.checked !== isMobile) {
+            deviceToggle.checked = isMobile;
+            document.body.classList.toggle('mobile-mode', isMobile);
+            updateGrid();
+        }
+        
+        if (JSON.stringify(config.pages) !== JSON.stringify(currentArtifacts)) {
+            currentArtifacts = config.pages || [];
             renderArtifacts();
         }
     } catch (error) {
-        console.error('Failed to load artifacts:', error);
+        console.error('Failed to sync config:', error);
     }
 }
 
-updateTransform();
-fetchArtifacts();
-setInterval(fetchArtifacts, 5000);
+async function init() {
+    updateTransform();
+    await syncConfig();
+    setInterval(syncConfig, 2000);
+}
+
+init();
+

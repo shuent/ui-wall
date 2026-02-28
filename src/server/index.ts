@@ -1,23 +1,45 @@
-import { readdir } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const PORT = 3000;
 const PUBLIC_DIR = join(process.cwd(), "public");
 const ARTIFACTS_DIR = join(process.cwd(), "artifacts");
+const CONFIG_FILE = join(process.cwd(), "config.json");
+
+async function getConfig() {
+  try {
+    const content = await readFile(CONFIG_FILE, "utf-8");
+    return JSON.parse(content);
+  } catch (error) {
+    return { pages: [], device: 'desktop' };
+  }
+}
+
+async function saveConfig(config: any) {
+  await writeFile(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
 
 const server = Bun.serve({
   port: PORT,
   async fetch(req) {
     const url = new URL(req.url);
 
-    // API: List artifacts
-    if (url.pathname === "/api/artifacts") {
+    // API: Get config
+    if (url.pathname === "/api/config" && req.method === "GET") {
+      const config = await getConfig();
+      return Response.json(config);
+    }
+
+    // API: Update config
+    if (url.pathname === "/api/config" && req.method === "POST") {
       try {
-        const files = await readdir(ARTIFACTS_DIR);
-        const htmlFiles = files.filter((file) => file.endsWith(".html"));
-        return Response.json(htmlFiles);
+        const newConfig = await req.json();
+        const currentConfig = await getConfig();
+        const updatedConfig = { ...currentConfig, ...newConfig };
+        await saveConfig(updatedConfig);
+        return Response.json({ success: true });
       } catch (error) {
-        return new Response("Error reading artifacts", { status: 500 });
+        return new Response("Error updating config", { status: 500 });
       }
     }
 
@@ -27,15 +49,11 @@ const server = Bun.serve({
     
     // Check public/
     let file = Bun.file(join(PUBLIC_DIR, path));
-    if (await file.exists()) {
-      return new Response(file);
-    }
+    if (await file.exists()) return new Response(file);
 
     // Check artifacts/
     file = Bun.file(join(ARTIFACTS_DIR, path));
-    if (await file.exists()) {
-      return new Response(file);
-    }
+    if (await file.exists()) return new Response(file);
 
     return new Response("Not Found", { status: 404 });
   },
