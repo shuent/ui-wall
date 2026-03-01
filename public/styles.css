@@ -125,9 +125,30 @@ body, html {
 #canvas {
     position: absolute;
     transform-origin: 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 120px;
+    padding: 80px;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.section-label {
+    font-size: 48px;
+    font-weight: 900;
+    color: #1a1a1a;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+    text-transform: capitalize;
+}
+
+.section-items {
     display: grid;
     gap: 30px;
-    padding: 40px;
 }
 
 .artifact-card {

@@ -1,14 +1,24 @@
 {
   "pages": [
-    "dashboard_v2.html",
-    "components_3.html",
-    "dashboard_v1.html",
-    "components_1.html",
-    "hello.html",
-    "components_2.html",
-    "components_4.html",
-    "components_5.html",
-    "https://example.com/"
+    {
+      "section": {
+        "label": "dashboard",
+        "items": [
+          "dashboard_v1.html",
+          "dashboard_v2.html"
+        ]
+      }
+    },
+    {
+      "section": {
+        "label": "components",
+        "items": [
+          "components_1.html",
+          "components_2.html",
+          "components_3.html"
+        ]
+      }
+    }
   ],
   "device": "desktop"
 }

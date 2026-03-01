@@ -19,16 +19,36 @@ const PORT = Number.parseInt(values.port!, 10);
 const PUBLIC_DIR = join(import.meta.dir, "public");
 const CONFIG_FILENAME = "ui-canvas-config.json";
 
+type UiSection = {
+  section: {
+    label: string;
+    items: string[];
+  };
+};
+
 type UiCanvasConfig = {
-  pages: string[];
+  pages: UiSection[];
   device: "desktop" | "mobile";
 };
 
 const DEFAULT_CONFIG: UiCanvasConfig = { pages: [], device: "desktop" };
 
+function isUiSection(page: any): page is UiSection {
+  return (
+    page &&
+    typeof page === "object" &&
+    page.section &&
+    typeof page.section.label === "string" &&
+    Array.isArray(page.section.items)
+  );
+}
+
 function normalizeConfig(input: Partial<UiCanvasConfig> | null | undefined): UiCanvasConfig {
-  const pages = Array.isArray(input?.pages) ? input.pages.filter((page): page is string => typeof page === "string") : DEFAULT_CONFIG.pages;
-  const device = input?.device === "mobile" || input?.device === "desktop" ? input.device : DEFAULT_CONFIG.device;
+  const pages = Array.isArray(input?.pages)
+    ? input.pages.filter(isUiSection)
+    : DEFAULT_CONFIG.pages;
+  const device =
+    input?.device === "mobile" || input?.device === "desktop" ? input.device : DEFAULT_CONFIG.device;
 
   return { pages: [...pages], device };
 }
