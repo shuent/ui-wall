@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { join, dirname } from "node:path";
+import { join } from "node:path";
 import { parseArgs } from "node:util";
 
 const { values } = parseArgs({
@@ -14,23 +14,41 @@ const { values } = parseArgs({
   strict: false,
 });
 
-const PORT = parseInt(values.port!);
+const PORT = Number.parseInt(values.port!, 10);
 // Use import.meta.dir to get the directory of the current file (portable)
 const PUBLIC_DIR = join(import.meta.dir, "public");
 const CONFIG_FILENAME = "ui-canvas-config.json";
 
+type UiCanvasConfig = {
+  pages: string[];
+  device: "desktop" | "mobile";
+};
+
+const DEFAULT_CONFIG: UiCanvasConfig = { pages: [], device: "desktop" };
+
+function normalizeConfig(input: Partial<UiCanvasConfig> | null | undefined): UiCanvasConfig {
+  const pages = Array.isArray(input?.pages) ? input.pages.filter((page): page is string => typeof page === "string") : DEFAULT_CONFIG.pages;
+  const device = input?.device === "mobile" || input?.device === "desktop" ? input.device : DEFAULT_CONFIG.device;
+
+  return { pages: [...pages], device };
+}
+
+function resolveConfigPath() {
+  return join(process.cwd(), CONFIG_FILENAME);
+}
+
 async function getConfig() {
   try {
-    const configPath = join(process.cwd(), CONFIG_FILENAME);
+    const configPath = resolveConfigPath();
     const content = await readFile(configPath, "utf-8");
-    return JSON.parse(content);
+    return normalizeConfig(JSON.parse(content) as Partial<UiCanvasConfig>);
   } catch (error) {
-    return { pages: [], device: 'desktop' };
+    return { ...DEFAULT_CONFIG, pages: [...DEFAULT_CONFIG.pages] };
   }
 }
 
-async function saveConfig(config: any) {
-  const configPath = join(process.cwd(), CONFIG_FILENAME);
+async function saveConfig(config: UiCanvasConfig) {
+  const configPath = resolveConfigPath();
   await writeFile(configPath, JSON.stringify(config, null, 2));
 }
 
@@ -48,9 +66,12 @@ const server = Bun.serve({
     // API: Update config
     if (url.pathname === "/api/config" && req.method === "POST") {
       try {
-        const newConfig = await req.json();
+        const patch = (await req.json()) as Partial<UiCanvasConfig>;
         const currentConfig = await getConfig();
-        const updatedConfig = { ...currentConfig, ...newConfig };
+        const updatedConfig = normalizeConfig({
+          pages: patch.pages ?? currentConfig.pages,
+          device: patch.device ?? currentConfig.device,
+        });
         await saveConfig(updatedConfig);
         return Response.json({ success: true });
       } catch (error) {
