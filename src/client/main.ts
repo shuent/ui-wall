@@ -169,18 +169,19 @@ function createCard(filename: string): HTMLElement {
 
 function renderArtifacts() {
   const allArtifacts = new Set<string>();
-  const allSectionLabels = new Set<string>();
+  const currentSectionKeys = new Set<string>();
 
-  currentPages.forEach((page) => {
-    allSectionLabels.add(page.section.label);
-    page.section.items.forEach(item => allArtifacts.add(item));
+  currentPages.forEach((page, idx) => {
+    const sectionKey = `section-${idx}`;
+    currentSectionKeys.add(sectionKey);
+    page.section.items.forEach((item) => allArtifacts.add(item));
   });
 
   // 1. Remove obsolete sections
-  for (const [label, sectionEl] of sectionMap.entries()) {
-    if (!allSectionLabels.has(label)) {
+  for (const [key, sectionEl] of sectionMap.entries()) {
+    if (!currentSectionKeys.has(key)) {
       sectionEl.remove();
-      sectionMap.delete(label);
+      sectionMap.delete(key);
     }
   }
 
@@ -194,29 +195,35 @@ function renderArtifacts() {
 
   // 3. Render/Update current sections and cards
   currentPages.forEach((page, sectionIdx) => {
-    let sectionEl = sectionMap.get(page.section.label);
+    const sectionKey = `section-${sectionIdx}`;
+    let sectionEl = sectionMap.get(sectionKey);
     if (!sectionEl) {
       sectionEl = document.createElement("div");
       sectionEl.className = "section";
-      
+
       const labelEl = document.createElement("div");
       labelEl.className = "section-label";
-      labelEl.textContent = page.section.label;
       sectionEl.appendChild(labelEl);
 
       const itemsEl = document.createElement("div");
       itemsEl.className = "section-items";
       sectionEl.appendChild(itemsEl);
-      
-      sectionMap.set(page.section.label, sectionEl);
+
+      sectionMap.set(sectionKey, sectionEl);
       canvas.appendChild(sectionEl);
     }
-    
+
+    // Update label in case it changed
+    const labelEl = sectionEl.querySelector(".section-label")!;
+    if (labelEl.textContent !== page.section.label) {
+      labelEl.textContent = page.section.label;
+    }
+
     // Ensure section order
     sectionEl.style.order = sectionIdx.toString();
 
     const itemsEl = sectionEl.querySelector(".section-items") as HTMLElement;
-    
+
     page.section.items.forEach((filename, itemIdx) => {
       let card = cardMap.get(filename);
       if (!card) {
@@ -228,7 +235,7 @@ function renderArtifacts() {
       if (card.parentElement !== itemsEl) {
         itemsEl.appendChild(card);
       }
-      
+
       // Ensure card order within its section container
       card.style.order = itemIdx.toString();
     });

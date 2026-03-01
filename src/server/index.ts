@@ -39,7 +39,8 @@ function isUiSection(page: any): page is UiSection {
     typeof page === "object" &&
     page.section &&
     typeof page.section.label === "string" &&
-    Array.isArray(page.section.items)
+    Array.isArray(page.section.items) &&
+    page.section.items.every((item: any) => typeof item === "string")
   );
 }
 
