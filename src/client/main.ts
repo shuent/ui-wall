@@ -1,9 +1,17 @@
 const viewport = document.getElementById("viewport")!;
 const canvas = document.getElementById("canvas")!;
+canvas.style.display = "flex";
 const deviceToggle = document.getElementById("device-toggle") as HTMLInputElement;
 
+type UiSection = {
+  section: {
+    label: string;
+    items: string[];
+  };
+};
+
 type UiCanvasConfig = {
-  pages?: string[];
+  pages?: UiSection[];
   device?: "desktop" | "mobile";
 };
 
@@ -18,9 +26,10 @@ let isPanning = false;
 let lastX = 0;
 let lastY = 0;
 
-let currentArtifacts: string[] = [];
+let currentPages: UiSection[] = [];
 let dragSourceFilename: string | null = null;
 const cardMap = new Map<string, HTMLElement>();
+const sectionMap = new Map<string, HTMLElement>();
 
 function updateTransform() {
   canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
@@ -28,9 +37,12 @@ function updateTransform() {
 }
 
 function updateGrid() {
-  const cols = Math.ceil(Math.sqrt(currentArtifacts.length || 1));
   const cardWidth = getComputedStyle(document.body).getPropertyValue("--card-width").trim();
-  canvas.style.gridTemplateColumns = `repeat(${cols}, ${cardWidth})`;
+  document.querySelectorAll(".section-items").forEach((container) => {
+    const itemCount = container.querySelectorAll(".artifact-card").length;
+    // Display all items in a single row
+    (container as HTMLElement).style.gridTemplateColumns = `repeat(${itemCount}, ${cardWidth})`;
+  });
 }
 
 function setMobileMode(isMobile: boolean) {
@@ -41,15 +53,22 @@ function setMobileMode(isMobile: boolean) {
   updateGrid();
 }
 
-function areSameArtifacts(nextArtifacts: string[]) {
-  if (nextArtifacts.length !== currentArtifacts.length) {
+function areSamePages(a: UiSection[], b: UiSection[]) {
+  if (a.length !== b.length) {
     return false;
   }
 
-  return nextArtifacts.every((artifact, index) => artifact === currentArtifacts[index]);
+  return a.every((page, index) => {
+    const other = b[index];
+    return (
+      page.section.label === other.section.label &&
+      page.section.items.length === other.section.items.length &&
+      page.section.items.every((item, i) => item === other.section.items[i])
+    );
+  });
 }
 
-async function updateConfigOnServer(newConfig: UiCanvasConfig) {
+async function updateConfigOnServer(newConfig: Partial<UiCanvasConfig>) {
   try {
     await fetch("/api/config", {
       method: "POST",
@@ -115,16 +134,31 @@ function createCard(filename: string): HTMLElement {
       return false;
     }
 
-    const sourceIdx = currentArtifacts.indexOf(dragSourceFilename);
-    const targetIdx = currentArtifacts.indexOf(filename);
+    // Find source and target positions
+    let sourceSecIdx = -1, sourceItemIdx = -1;
+    let targetSecIdx = -1, targetItemIdx = -1;
 
-    if (sourceIdx !== -1 && targetIdx !== -1) {
-      [currentArtifacts[sourceIdx], currentArtifacts[targetIdx]] = [
-        currentArtifacts[targetIdx],
-        currentArtifacts[sourceIdx],
-      ];
+    currentPages.forEach((page, sIdx) => {
+      const iIdxS = page.section.items.indexOf(dragSourceFilename!);
+      if (iIdxS !== -1) {
+        sourceSecIdx = sIdx;
+        sourceItemIdx = iIdxS;
+      }
+      const iIdxT = page.section.items.indexOf(filename);
+      if (iIdxT !== -1) {
+        targetSecIdx = sIdx;
+        targetItemIdx = iIdxT;
+      }
+    });
+
+    if (sourceSecIdx !== -1 && targetSecIdx !== -1) {
+      // Swap items
+      const temp = currentPages[sourceSecIdx].section.items[sourceItemIdx];
+      currentPages[sourceSecIdx].section.items[sourceItemIdx] = currentPages[targetSecIdx].section.items[targetItemIdx];
+      currentPages[targetSecIdx].section.items[targetItemIdx] = temp;
+
       renderArtifacts();
-      void updateConfigOnServer({ pages: [...currentArtifacts] });
+      void updateConfigOnServer({ pages: [...currentPages] });
     }
 
     return false;
@@ -134,24 +168,80 @@ function createCard(filename: string): HTMLElement {
 }
 
 function renderArtifacts() {
-  updateGrid();
+  const allArtifacts = new Set<string>();
+  const currentSectionKeys = new Set<string>();
 
+  currentPages.forEach((page, idx) => {
+    const sectionKey = `section-${idx}`;
+    currentSectionKeys.add(sectionKey);
+    page.section.items.forEach((item) => allArtifacts.add(item));
+  });
+
+  // 1. Remove obsolete sections
+  for (const [key, sectionEl] of sectionMap.entries()) {
+    if (!currentSectionKeys.has(key)) {
+      sectionEl.remove();
+      sectionMap.delete(key);
+    }
+  }
+
+  // 2. Remove obsolete cards
   for (const [filename, card] of cardMap.entries()) {
-    if (!currentArtifacts.includes(filename)) {
+    if (!allArtifacts.has(filename)) {
       card.remove();
       cardMap.delete(filename);
     }
   }
 
-  currentArtifacts.forEach((filename, index) => {
-    let card = cardMap.get(filename);
-    if (!card) {
-      card = createCard(filename);
-      cardMap.set(filename, card);
-      canvas.appendChild(card);
+  // 3. Render/Update current sections and cards
+  currentPages.forEach((page, sectionIdx) => {
+    const sectionKey = `section-${sectionIdx}`;
+    let sectionEl = sectionMap.get(sectionKey);
+    if (!sectionEl) {
+      sectionEl = document.createElement("div");
+      sectionEl.className = "section";
+
+      const labelEl = document.createElement("div");
+      labelEl.className = "section-label";
+      sectionEl.appendChild(labelEl);
+
+      const itemsEl = document.createElement("div");
+      itemsEl.className = "section-items";
+      sectionEl.appendChild(itemsEl);
+
+      sectionMap.set(sectionKey, sectionEl);
+      canvas.appendChild(sectionEl);
     }
-    card.style.order = index.toString();
+
+    // Update label in case it changed
+    const labelEl = sectionEl.querySelector(".section-label")!;
+    if (labelEl.textContent !== page.section.label) {
+      labelEl.textContent = page.section.label;
+    }
+
+    // Ensure section order
+    sectionEl.style.order = sectionIdx.toString();
+
+    const itemsEl = sectionEl.querySelector(".section-items") as HTMLElement;
+
+    page.section.items.forEach((filename, itemIdx) => {
+      let card = cardMap.get(filename);
+      if (!card) {
+        card = createCard(filename);
+        cardMap.set(filename, card);
+      }
+
+      // Only append if it's not already in the correct parent
+      if (card.parentElement !== itemsEl) {
+        itemsEl.appendChild(card);
+      }
+
+      // Ensure card order within its section container
+      card.style.order = itemIdx.toString();
+    });
   });
+
+  updateGrid();
 }
 
 async function syncConfig() {
@@ -161,9 +251,9 @@ async function syncConfig() {
 
     setMobileMode(config.device === "mobile");
 
-    const nextArtifacts = config.pages || [];
-    if (!areSameArtifacts(nextArtifacts)) {
-      currentArtifacts = [...nextArtifacts];
+    const nextPages = config.pages || [];
+    if (!areSamePages(nextPages, currentPages)) {
+      currentPages = [...nextPages];
       renderArtifacts();
     }
   } catch (error) {
